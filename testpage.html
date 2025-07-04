@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoC - SOP Violation: Parent Injecting Script in Iframe</title>
+    <script>
+        // Function to simulate an iframe trying to inject a script into its own context
+        function createIframe() {
+            // Create an iframe element
+            let iframe = document.createElement('iframe');
+            iframe.src = 'https://example.com'; // External origin for iframe (replace with actual test URL)
+            iframe.style.width = '100%';
+            iframe.style.height = '500px';
+            iframe.style.border = 'none';
+
+            // Append iframe to the body
+            document.body.appendChild(iframe);
+
+            // Once the iframe is loaded, attempt to inject a script into its context
+            iframe.onload = function() {
+                try {
+                    // Check if the iframe is from a different origin (should throw an error if SOP is working)
+                    let iframeDocument = iframe.contentWindow.document;
+
+                    // Inject a script into the iframe's context (cross-origin violation)
+                    let script = iframeDocument.createElement('script');
+                    script.innerHTML = `
+                        console.log('Injected script into iframe context!');
+                        // Attempting to access the camera from inside the iframe's context
+                        navigator.mediaDevices.getUserMedia({ video: true })
+                            .then(stream => {
+                                console.log("Camera accessed", stream);
+                            })
+                            .catch(error => {
+                                console.log("Camera access denied", error);
+                            });
+                    `;
+                    iframeDocument.body.appendChild(script); // Append the script to the iframe document
+
+                } catch (e) {
+                    // If SOP is enforced, an error will be thrown and logged
+                    console.log('SOP violation prevented: ', e);
+                }
+            };
+        }
+
+        // Trigger the malicious iframe creation when the page loads
+        window.onload = function() {
+            createIframe();
+        };
+    </script>
+</head>
+<body>
+    <p>Check if the parent tries to inject a script inside the iframe's context. This should be blocked by SOP, but is a privacy risk if bypassed.</p>
+</body>
+</html>
